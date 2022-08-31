@@ -1,34 +1,28 @@
+import { useEffect, useRef, useState } from "react";
 import "ol/ol.css";
 import "ol-layerswitcher/dist/ol-layerswitcher.css";
-import { useEffect, useRef, useState } from "react";
-
 import type { Type } from "ol/geom/Geometry";
 import { Map as OlMap, View } from "ol";
 import { fromLonLat } from "ol/proj";
 import {
   Group as LayerGroup,
   Tile as TileLayer,
-  Vector as VectorLayer,
-  Image as ImageLayer,
+  Vector as VectorLayer
 } from "ol/layer";
-import {
-  ImageArcGISRest,
-  OSM,
-  Stamen,
-  Vector as VectorSource,
-} from "ol/source";
+import { OSM, Stamen, Vector as VectorSource } from "ol/source";
 import LayerSwitcher from "ol-layerswitcher";
 import { BaseLayerOptions, GroupLayerOptions } from "ol-layerswitcher";
 import { Draw } from "ol/interaction";
 import { FullScreen, defaults, ScaleLine } from "ol/control";
 import { GeoJSON } from "ol/format";
 import { Fill, Stroke, Style } from "ol/style";
-
 import intersect from "@turf/intersect";
 import buffer from "@turf/buffer";
 import pointOnFeature from "@turf/point-on-feature";
 
 const Map = () => {
+  const turfCoors = "EPSG:4326";
+  const openLayersCoors = "EPSG:3857";
   const mapRef = useRef<HTMLDivElement>(null);
 
   const [map, setMap] = useState<OlMap>();
@@ -42,7 +36,7 @@ const Map = () => {
       title: "OSM",
       type: "base",
       visible: true,
-      source: new OSM(),
+      source: new OSM()
     } as BaseLayerOptions);
 
     const watercolor = new TileLayer({
@@ -50,8 +44,8 @@ const Map = () => {
       type: "base",
       visible: false,
       source: new Stamen({
-        layer: "watercolor",
-      }),
+        layer: "watercolor"
+      })
     } as BaseLayerOptions);
 
     const watercolorWithLabels = new LayerGroup({
@@ -61,20 +55,20 @@ const Map = () => {
       layers: [
         new TileLayer({
           source: new Stamen({
-            layer: "watercolor",
-          }),
+            layer: "watercolor"
+          })
         }),
         new TileLayer({
           source: new Stamen({
-            layer: "terrain-labels",
-          }),
-        } as BaseLayerOptions),
-      ],
+            layer: "terrain-labels"
+          })
+        } as BaseLayerOptions)
+      ]
     } as GroupLayerOptions);
 
     const baseMaps = new LayerGroup({
       title: "Basemaps",
-      layers: [osm, watercolor, watercolorWithLabels],
+      layers: [osm, watercolor, watercolorWithLabels]
     } as GroupLayerOptions);
 
     const vector = new VectorSource({ wrapX: false });
@@ -91,23 +85,14 @@ const Map = () => {
         new VectorLayer({
           title: "Addresses",
           source: addresses,
-          visible: false,
+          visible: false
         } as BaseLayerOptions),
         new VectorLayer({
           title: "Constraints",
           source: vector,
-          visible: false,
-        } as BaseLayerOptions),
-        new ImageLayer({
-          title: "Countries",
-          visible: false,
-          source: new ImageArcGISRest({
-            ratio: 1,
-            params: { LAYERS: "show:0" },
-            url: "https://ons-inspire.esriuk.com/arcgis/rest/services/Administrative_Boundaries/Countries_December_2016_Boundaries/MapServer",
-          }),
-        } as BaseLayerOptions),
-      ],
+          visible: false
+        } as BaseLayerOptions)
+      ]
     } as GroupLayerOptions);
 
     const map = new OlMap({
@@ -116,14 +101,14 @@ const Map = () => {
       controls: defaults().extend([new FullScreen(), new ScaleLine()]),
       view: new View({
         center: fromLonLat([-2.4673, 52.6776]),
-        zoom: 12,
-      }),
+        zoom: 13
+      })
     });
     setMap(map);
 
     const layerSwitcher = new LayerSwitcher({
       reverse: true,
-      groupSelectStyle: "children",
+      groupSelectStyle: "children"
     });
     map.addControl(layerSwitcher);
 
@@ -147,29 +132,29 @@ const Map = () => {
   const addGeoJson = async () => {
     const format = new GeoJSON();
 
-    const { mapData } = await import("./geojson");
-    const features = format.readFeatures(mapData);
+    const mapData = await import("./geojson");
+    const features = format.readFeatures(mapData.default);
     const turfPolys = format.writeFeaturesObject(features);
 
-    features.forEach((feature) => {
+    features.forEach(feature => {
       const turfPoly = format.writeFeatureObject(feature);
 
       const turfPoint = pointOnFeature(turfPoly);
       const address = format.readFeature(turfPoint);
-      address.getGeometry()?.transform("EPSG:4326", "EPSG:3857");
+      address.getGeometry()?.transform(turfCoors, openLayersCoors);
       addressesSource?.addFeature(address);
 
       for (let i = 0; i < features.length; i++) {
         const intersected = intersect(turfPoly, turfPolys.features[i]);
 
         if (intersected) {
-          setIntersections((num) => num + 1);
+          setIntersections(num => num + 1);
           const intersection = format.readFeature(intersected);
 
-          intersection.getGeometry()?.transform("EPSG:4326", "EPSG:3857");
+          intersection.getGeometry()?.transform(turfCoors, openLayersCoors);
           intersection.setStyle(
             new Style({
-              fill: new Fill({ color: "rgba(255, 0, 0, 0.3)" }),
+              fill: new Fill({ color: "rgb(255, 165, 0, 0.5)" })
             })
           );
 
@@ -177,11 +162,11 @@ const Map = () => {
         }
       }
 
-      feature.getGeometry()?.transform("EPSG:4326", "EPSG:3857");
+      feature.getGeometry()?.transform(turfCoors, openLayersCoors);
       feature.setStyle(
         new Style({
           stroke: new Stroke({ color: "rgb(255, 0, 0)" }),
-          fill: new Fill({ color: "rgba(255, 0, 0, 0)" }),
+          fill: new Fill({ color: "rgba(255, 0, 0, 0)" })
         })
       );
     });
@@ -193,21 +178,33 @@ const Map = () => {
     const format = new GeoJSON();
     const addresses = addressesSource?.getFeatures();
 
-    addresses?.forEach((address) => {
+    addresses?.forEach(address => {
+      address.getGeometry()?.transform(openLayersCoors, turfCoors);
       const turfPoint = format.writeFeatureObject(address);
-      const buffered = buffer(turfPoint, 10, { units: "miles" });
+
+      const buffered = buffer(turfPoint, 0.2, { units: "miles" });
 
       const bufferedArea = format.readFeature(buffered);
-      bufferedArea.getGeometry()?.transform("EPSG:4326", "EPSG:3857");
+      bufferedArea.getGeometry()?.transform(turfCoors, openLayersCoors);
+      bufferedArea.setStyle(
+        new Style({
+          fill: new Fill({
+            color: "rgba(60, 179, 113, 0.15)"
+          }),
+          stroke: new Stroke({
+            color: "rgb(60, 179, 113)"
+          })
+        })
+      );
 
       addressesSource?.addFeature(bufferedArea);
     });
   };
 
   return (
-    <div>
+    <>
       <div ref={mapRef} style={{ width: "100%", height: "600px" }} />
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button onClick={() => startDrawing("MultiPolygon")}>
           Start drawing
         </button>
@@ -219,17 +216,15 @@ const Map = () => {
 
         {intersections > 0 && <p>Intersected {intersections} times</p>}
       </div>
-    </div>
+    </>
   );
 };
 
 export default function App() {
   return (
-    <div>
-      <h1>Hello StackBlitz!</h1>
-      <p>Start editing to see some magic happen :)</p>
-
+    <main>
+      <h1>ReactOL map list</h1>
       <Map />
-    </div>
+    </main>
   );
 }
