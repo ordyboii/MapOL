@@ -4,28 +4,11 @@
   box-sizing: border-box;
 }
 
-body {
+html {
   font-family: sans-serif;
 }
 
-main {
-  display: grid;
-  gap: 1rem;
-  padding: 2rem;
-}
-
-button {
-  background-color: coral;
-  color: white;
-  padding: 0.7rem 0.8rem;
-  border: 0;
-  border-radius: 0.2rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 150ms ease-out;
-}
-
-button:hover {
-  transform: scale(0.95);
+.map {
+  display: flex;
+  height: 1000px;
 }
