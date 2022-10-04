@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@turf/intersect": "^6.5.0",
     "ol": "^7.1.0",
     "ol-layerswitcher": "^4.0.0",
     "react": "^18.2.0",

@@ -1,40 +1,61 @@
 import { useRef, useState } from "react";
 import { useMap } from "./map";
+import type { Feature } from "ol";
+import { Vector as VectorLayer } from "ol/layer";
+import { GeoJSON } from "ol/format";
+import { Fill, Stroke, Style } from "ol/style";
+import intersect from "@turf/intersect";
 
 export default function App() {
   const mapRef = useRef(null);
-  const [type, setType] = useState("MultiPolygon");
-  const { map, draw, snap } = useMap(mapRef, type);
+  const [intersections, setIntersections] = useState(0);
+  const { editLayer, map } = useMap(mapRef);
 
-  const startDrawing = () => {
-    if (draw && snap) {
-      map?.addInteraction(draw);
-      map?.addInteraction(snap);
-    }
-  };
+  editLayer?.getSource()?.on("addfeature", () => {
+    const format = new GeoJSON();
+    const turfPolygon = format.writeFeaturesObject(
+      editLayer.getSource()?.getFeatures()!
+    );
 
-  const stopDrawing = () => {
-    if (draw && snap) {
-      map?.removeInteraction(draw);
-      map?.removeInteraction(snap);
-    }
-  };
+    map?.getAllLayers().forEach(layer => {
+      if (layer instanceof VectorLayer) {
+        layer
+          .getSource()
+          ?.getFeatures()
+          .forEach((feature: Feature) => {
+            const turfFeature = format.writeFeatureObject(feature);
+            const intersected = intersect(
+              turfPolygon.features[0].geometry,
+              turfFeature?.geometry
+            );
+            if (intersected) {
+              setIntersections(i => i + 1);
+              const polygon = format.readFeature(intersected);
+
+              polygon.getGeometry()?.transform("EPSG:4326", "EPSG:3857");
+              polygon.setStyle(
+                new Style({
+                  fill: new Fill({
+                    color: "red"
+                  }),
+                  stroke: new Stroke({
+                    color: "red",
+                    width: 2
+                  })
+                })
+              );
+              editLayer.getSource()?.addFeature(polygon);
+            }
+          });
+      }
+    });
+  });
 
   return (
     <main>
       <h1>Map example</h1>
       <div ref={mapRef} className='map'></div>
-      <section>
-        <select onChange={e => setType(e.target.value)}>
-          <option value='MultiPolygon'>MultiPolygon</option>
-          <option value='Polygon'>Polygon</option>
-          <option value='Circle'>Circle</option>
-          <option value='Point'>Point</option>
-        </select>
-        <button onClick={startDrawing}>Start Drawing</button>
-        <button onClick={stopDrawing}>Stop Drawing</button>
-        <button onClick={() => draw?.removeLastPoint()}>Undo</button>
-      </section>
+      <p>{intersections} intersections</p>
     </main>
   );
 }

@@ -10,5 +10,20 @@ html {
 
 .map {
   display: flex;
-  height: 1000px;
+  height: 600px;
+}
+
+.draw {
+  position: absolute;
+  top: 8px;
+  left: 40px;
+  padding: 3px 6px;
+  border: 1px solid lightgray;
+  background: white;
+  border-radius: 3px;
+  font-weight: bold;
+  color: darkslategray;
+}
+.draw:hover {
+  border: 1px solid black;
 }
